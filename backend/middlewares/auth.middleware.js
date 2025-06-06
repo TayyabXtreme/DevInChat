@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import redisClient from "../services/radis.service.js";
-
+import userModel from "../models/user.model.js"
 export const authUser=async(req,res,next)=>{
     try {
         const token=req.cookies.token ||  req.headers.authorization.split(" ")[1];
@@ -16,6 +16,11 @@ export const authUser=async(req,res,next)=>{
             return res.status(400).json({message:"Invalid credentials"});
         }
         const decoded=await jwt.verify(token,process.env.JWT_SECRET); 
+        const user=await userModel.findOne({email:decoded.email})
+        if(!user){
+            return res.status(400).json({message:"Invalid credentials"});
+        }
+
         req.user=decoded;
         next();
     } catch (error) {
