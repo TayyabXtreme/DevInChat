@@ -7,6 +7,9 @@ export const authUser=async(req,res,next)=>{
         if(!token){
             return res.status(400).json({message:"Invalid credentials"});
         }
+       
+
+
         const isBlacklisted=await redisClient.get(token);
         if(isBlacklisted){
             res.cookie('token','')

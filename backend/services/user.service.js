@@ -20,3 +20,14 @@ export const createUser=async({email,password})=>{
     return user;
 
 }
+
+
+export const getAllUsers=async({userId})=>{
+    const users=await userModel.find({
+        _id:{$ne:userId}
+    });
+    if(!users){
+        throw new Error("No users found");
+    }
+    return users;
+}
