@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useContext, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from '../config/axios'
+import { UserContext } from '../context/user.context'
 const Register = () => {
   const [formData, setFormData] = useState({
     email: '',
@@ -8,6 +9,7 @@ const Register = () => {
     confirmPassword: ''
   })
   const [error, setError] = useState('')
+  const { setUser } = useContext(UserContext)
   const navigate = useNavigate()
 
   const handleChange = (e) => {
@@ -31,11 +33,13 @@ const Register = () => {
       email: formData.email,
       password: formData.password
     }).then((res)=>{
-        if (res.data) {
+        if (res.data && res.data.user && res.data.token) {
             setError('')
             //cookie setup in cookie
+            localStorage.setItem('token', res.data.token)
+            setUser(res.data.user)
+            
 
-            document
             
             navigate('/')
           }

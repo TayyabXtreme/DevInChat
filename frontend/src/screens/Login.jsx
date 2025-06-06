@@ -1,13 +1,16 @@
-import React, { useState } from 'react'
+import React, { useContext, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from '../config/axios'
+import { UserContext } from '../context/user.context'
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   })
   const [error, setError] = useState('')
+  const {setUser}=useContext(UserContext)
   const navigate = useNavigate()
+  
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -25,8 +28,10 @@ const Login = () => {
     console.log('Login attempt with:', formData)
     axios.post('/users/login', formData).then((res)=>{
       console.log(res.data)
-      if (res.data) {
+      if (res.data && res.data.token && res.data.user) {
         setError('')
+        localStorage.setItem('token', res.data.token)
+        setUser(res.data.user)
         navigate('/')
       }
       else{
