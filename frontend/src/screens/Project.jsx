@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import axios from '../config/axios'
-import { intializeSocket } from '../config/socket'
+import { intializeSocket, receiveMessage, sendMessage } from '../config/socket'
+import { UserContext } from '../context/user.context'
 const Project = () => {
+    const {user}=useContext(UserContext)
     const location = useLocation()
     const [modelIsOpen, setModelIsOpen] = useState(false)
     const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
     const [selectedUser, setSelectedUser] = useState([])
     const [project, setProject] = useState(location.state.project)
-
+  console.log('user',user)
     const [users, setUsers] = useState([])
     console.log(location.state)
     const handleUserClick = (id) => {
@@ -34,12 +36,25 @@ const Project = () => {
           console.log(err)
         })
     }
+    const [message, setMessage] = useState('')
+    const sendMessageHandler=()=>{
+      sendMessage('project-message',{
+        message,
+        sender:user._id
+      })
+      setMessage('')
+      
+    }
 
 
 
     useEffect(() => {
 
-      intializeSocket()
+      intializeSocket(project._id)
+
+      receiveMessage('project-message',(data)=>{
+        console.log("data",data)
+      })
 
       axios.get(`/projects/get-project/${location.state.project._id}`).then(res=>{
         console.log("s",res.data.project)
@@ -118,11 +133,15 @@ const Project = () => {
 
           <div className="inputField  w-full flex ">
             <input
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
             type='text'
             placeholder='Type your message...'
             className='p-2 outline-none border-none bg-white flex-grow'
             />
             <button
+            onClick={sendMessageHandler}
+
             className='flex-grow  bg-slate-950 text-white flex items-center justify-center'
             >
               <i className='ri-send-plane-fill'></i>
