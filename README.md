@@ -242,6 +242,41 @@ backend/
     "users": ["user_id"]
   }
   ```
+### Chat Interface
+
+#### Send Message
+- **URL**: `/projects/send-message`
+- **Method**: `POST`
+- **Headers**: `Authorization: Bearer jwt_token`
+- **Body**:
+  ```json
+  {
+    "projectId": "project_id",
+    "message": "Hello, everyone!"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "message": "Message sent successfully"
+  }
+  ```
+
+#### Get Messages
+- **URL**: `/projects/get-messages/:projectId`
+- **Method**: `GET`
+- **Headers**: `Authorization: Bearer jwt_token`
+- **Response**:
+  ```json
+  [
+    {
+       
+        "message": "Hello, everyone!",
+        "sender": "user_id",
+        "createdAt": "2023-12-12T12:12:12.123Z"
+    }
+  ]
+
 
 ## Pages
 
