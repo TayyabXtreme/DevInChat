@@ -51,7 +51,7 @@ io.on('connection', socket => {
     socket.join(socket.roomId)
     socket.on('project-message',data=>{
         console.log(data);
-        socket.to(socket.roomId).emit('project-message',data);
+        socket.broadcast.to(socket.roomId).emit('project-message',data);
     })
 
     socket.on('event', data => { /* … */ });
