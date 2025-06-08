@@ -1,240 +1,211 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { createRef, useContext, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import axios from '../config/axios'
 import { intializeSocket, receiveMessage, sendMessage } from '../config/socket'
 import { UserContext } from '../context/user.context'
+
 const Project = () => {
-    const {user}=useContext(UserContext)
-    const location = useLocation()
-    const [modelIsOpen, setModelIsOpen] = useState(false)
-    const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
-    const [selectedUser, setSelectedUser] = useState([])
-    const [project, setProject] = useState(location.state.project)
-  console.log('user',user)
-    const [users, setUsers] = useState([])
-    console.log(location.state)
-    const handleUserClick = (id) => {
-        setSelectedUser((prevSelectedUser) => {
-          if (prevSelectedUser.includes(id)) {
-            return prevSelectedUser.filter((userId) => userId !== id);
-          } else {
-            return [...prevSelectedUser, id];
-          }
-        });
-    }
+  const { user } = useContext(UserContext)
+  const location = useLocation()
+  const [modelIsOpen, setModelIsOpen] = useState(false)
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState([])
+  const [project, setProject] = useState(location.state.project)
+  const messageBox = createRef()
+  const messageEndRef = useRef(null)
 
-    const addColobrators=()=>{
-        axios.put('/projects/add-user',{
-          projectId:location.state.project._id,
-          users:selectedUser
-        }).then(res=>{
-          console.log(res.data)
-          setModelIsOpen(false)
-          setSelectedUser([])
-          
-        }).catch(err=>{
-          console.log(err)
-        })
-    }
-    const [message, setMessage] = useState('')
-    const sendMessageHandler=()=>{
-      sendMessage('project-message',{
-        message,
-        sender:user._id
+  const [users, setUsers] = useState([])
+  const [message, setMessage] = useState('')
+
+  const handleUserClick = (id) => {
+    setSelectedUser((prevSelectedUser) =>
+      prevSelectedUser.includes(id)
+        ? prevSelectedUser.filter((userId) => userId !== id)
+        : [...prevSelectedUser, id]
+    )
+  }
+
+  const addColobrators = () => {
+    axios.put('/projects/add-user', {
+      projectId: location.state.project._id,
+      users: selectedUser,
+    })
+      .then((res) => {
+        setModelIsOpen(false)
+        setSelectedUser([])
       })
-      setMessage('')
-      
-    }
+      .catch((err) => console.log(err))
+  }
 
+  const sendMessageHandler = () => {
+    sendMessage('project-message', {
+      message,
+      sender: user,
+    })
+    appendOutgoingMessage({ message, sender: user })
+    setMessage('')
+  }
 
+  const appendIncommingMessage = (messageObject) => {
+    const messageDiv = document.createElement('div')
+    messageDiv.classList.add('incomming', 'max-w-56', 'message', 'flex', 'flex-col', 'p-2', 'bg-slate-700', 'w-fit', 'rounded-md', 'text-white')
+    messageDiv.innerHTML = `<small class='opacity-65 text-xs'>${messageObject.sender.email}</small>
+    <p class="text-sm">${messageObject.message}</p>`
+    messageBox.current.appendChild(messageDiv)
+    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
 
-    useEffect(() => {
+  const appendOutgoingMessage = (messageObject) => {
+    const messageDiv = document.createElement('div')
+    messageDiv.classList.add('ml-auto', 'max-w-56', 'message', 'flex', 'flex-col', 'p-2', 'bg-blue-700', 'w-fit', 'rounded-md', 'text-white')
+    messageDiv.innerHTML = `<small class='opacity-65 text-xs'>${messageObject.sender.email}</small>
+    <p class="text-sm">${messageObject.message}</p>`
+    messageBox.current.appendChild(messageDiv)
+    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
 
-      intializeSocket(project._id)
+  useEffect(() => {
+    intializeSocket(project._id)
 
-      receiveMessage('project-message',(data)=>{
-        console.log("data",data)
-      })
+    receiveMessage('project-message', (data) => {
+      appendIncommingMessage(data)
+    })
 
-      axios.get(`/projects/get-project/${location.state.project._id}`).then(res=>{
-        console.log("s",res.data.project)
+    axios.get(`/projects/get-project/${location.state.project._id}`)
+      .then((res) => {
         setProject(res.data.project)
-      }).catch(err=>{
-        console.log(err)
       })
+      .catch((err) => console.log(err))
 
-      axios.get('/users/all').then(res=>{
-        setUsers(res.data.allUsers)
-      }).catch(err=>{
-        console.log(err)
-      })
-
-    }, [])
-
-    console.log("prjeca",project)
-   
-
+    axios.get('/users/all')
+      .then((res) => setUsers(res.data.allUsers))
+      .catch((err) => console.log(err))
+  }, [])
 
   return (
-   <main
-   className='h-screen w-screen flex'
-   >
-
-   <section
-    className='left relative flex flex-col h-full min-w-96 bg-slate-300 '
-   >
-
-        <header 
-        className='flex justify-between flex-row-reverse p-4 w-full
-        bg-slate-100
-        '
-        >
+    <main className='h-screen w-screen flex bg-[#0f172a] text-white'>
+      <section className='left relative flex flex-col h-screen w-full md:w-[450px] bg-[#1e293b] shadow-lg'>
+        <header className='flex justify-between items-center p-4 w-full bg-[#1e293b] border-b border-gray-700 sticky top-0 z-10'>
           <button
-          onClick={() => setIsSidePanelOpen(!isSidePanelOpen)}
-          className='bg-white rounded-full p-2 px-3 cursor-pointer'
+            className='hover:bg-blue-700 rounded-full p-2 transition-colors duration-200 flex items-center gap-2'
+            onClick={() => setModelIsOpen(true)}
           >
-          <i className='ri-group-fill'></i>
-          
-          </button>   
-          <button className='bg-white rounded-full p-2 px-3 cursor-pointer' onClick={() => setModelIsOpen(true)}>
-           
-           
-           
-
-          <i className='ri-add-fill'></i>
-          <small>
-          
-          Add Coloborators
-        </small>
+            <i className='ri-add-fill text-xl'></i>
+            <span className='text-sm'>Add Collaborators</span>
           </button>
-        
+          <button
+            onClick={() => setIsSidePanelOpen(!isSidePanelOpen)}
+            className='hover:bg-blue-700 rounded-full p-2 transition-colors duration-200'
+          >
+            <i className='ri-group-fill text-xl'></i>
+          </button>
         </header>
-        <div className='conversation-area flex-grow flex flex-col '>
 
-          <div className="message-box p-1 flex-grow flex flex-col gap-1">
-              <div className="incomming max-w-56 message flex flex-col p-2 bg-slate-50 w-fit rounded-md">
-                <small
-                className='opacity-65 text-xs'
-                >example@gmail.com</small>
-                  <p
-                  className='text-sm'
-                  >Lorem ipsum dolor sit, amet consectetur adipisicing elit. Nam, nulla.</p>
-              </div>
-
-              <div className="ml-auto max-w-56 message flex flex-col p-2 bg-slate-50 w-fit rounded-md">
-                <small
-                className='opacity-65 text-xs'
-                >example@gmail.com</small>
-                  <p
-                  className='text-sm'
-                  >Lorem ipsum dolor sit.</p>
-              </div>
-          </div>
-
-          <div className="inputField  w-full flex ">
-            <input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            type='text'
-            placeholder='Type your message...'
-            className='p-2 outline-none border-none bg-white flex-grow'
-            />
-            <button
-            onClick={sendMessageHandler}
-
-            className='flex-grow  bg-slate-950 text-white flex items-center justify-center'
-            >
-              <i className='ri-send-plane-fill'></i>
-            </button>
-          </div>
-
-        </div>
-
-        <div className={`sidePanel w-full h-full flex flex-col gap-2 bg-slate-50 absolute transition-all ${isSidePanelOpen ? 'translate-x-0' : '-translate-x-full'} top-0`}>
-          <header
-          className='flex justify-end p-4 w-full bg-slate-200'
-          >
-          <button 
-          className='bg-white rounded-full p-2 px-3 cursor-pointer'
-          onClick={() => setIsSidePanelOpen(!isSidePanelOpen)}
-          >
-          <i className='ri-close-fill'></i>
-          </button>
-          </header>
-    <div className='users flex flex-col gap-2'>
-{project!=null && project.users.length >  0 &&  project.users.map((user) => (
-    <div
-      key={user._id}
-      className='user cursor-pointer hover:bg-slate-200 p-2 flex gap-2 items-center'
-    >
-      <div className='aspect-square rounded-full w-fit h-fit flex items-center justify-center p-5 text-white bg-slate-600'>
-        <i className="ri-user-fill absolute"></i>
-      </div>
-      <h1 className='font-semibold text-lg'>
-        {user.email && user.email.split('@')[0]}
-      </h1>
-    </div>
-  ))
-}
-</div>
-          
-        
-          </div>
-   </section>
-
-{modelIsOpen && (
-    <div className='fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4'>
-      <div className='bg-white rounded-lg w-full max-w-md'>
-        <div className='p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10  rounded-md'>
-          <h2 className='text-xl font-semibold'>Select User</h2>
-          <button 
-            onClick={() => setModelIsOpen(false)}
-            className='text-gray-500 hover:text-gray-700'
-          >
-            <i className='ri-close-line text-2xl'></i>
-          </button>
-        </div>
-        
-        <div className='p-4 space-y-2 max-h-[60vh] overflow-y-auto '>
-          {users.map((user) => (
+        <div className='flex-1 flex flex-col h-[calc(100vh-140px)] mt-16'>
+          <div className='flex-1 overflow-hidden'>
             <div
-              key={user._id}
-              onClick={() => handleUserClick(user._id)}
-              className={`flex items-center gap-3 p-3 hover:bg-gray-100 cursor-pointer ${
-                selectedUser.includes(user._id)? 'bg-slate-200' : ''}`}
+              className='message-box p-4 h-full overflow-y-auto scroll-smooth space-y-2'
+              ref={messageBox}
+              style={{ scrollBehavior: 'smooth' }}
             >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                selectedUser.includes(user._id) ? 'bg-slate-950 text-white' : 'bg-gray-200'}`}>
-                <i className='ri-user-fill'></i>
-              </div>
-              <div>
-                <h3 className='font-medium'>
-                 
-                  { user&& user?.email.split('@')[0]}
-                </h3>
-
-                <p className='text-sm text-gray-500'>{user.email}</p>
-              </div>
+              <div ref={messageEndRef}></div>
             </div>
-          ))}
-        </div>
-        <div className='p-4 border-t sticky bottom-0 bg-white'>
-          <button 
-            className='w-full bg-slate-950 text-white px-4 py-2 rounded-lg'
-            onClick={() => addColobrators()}
-          >
-            Add Collaborators
-          </button>
-        </div>
-      </div>
-    </div>
-  )}
-       
-  
- 
+          </div>
 
-   
-   </main>
+          <div className='input-area p-4 border-t border-gray-700 bg-[#1e293b]'>
+            <div className='flex gap-2 items-center'>
+              <input
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                type='text'
+                placeholder='Type your message...'
+                className='flex-1 p-3 rounded-full bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500'
+              />
+              <button
+                onClick={sendMessageHandler}
+                className='p-3 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200'
+              >
+                <i className='ri-send-plane-fill text-xl'></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className={`sidePanel fixed md:absolute w-full md:w-[450px] h-full flex flex-col bg-[#1e293b] shadow-xl transition-transform duration-300 ease-in-out ${isSidePanelOpen ? 'translate-x-0' : '-translate-x-full'} top-0 z-20`}>
+          <header className='flex justify-between items-center p-4 border-b border-gray-700'>
+            <h2 className='text-xl font-semibold'>Project Members</h2>
+            <button
+              className='hover:bg-blue-700 rounded-full p-2 transition-colors duration-200'
+              onClick={() => setIsSidePanelOpen(false)}
+            >
+              <i className='ri-close-fill text-xl'></i>
+            </button>
+          </header>
+
+          <div className='users flex-1 overflow-y-auto p-4 space-y-2'>
+            {project?.users?.length > 0 && project.users.map((user) => (
+              <div
+                key={user._id}
+                className='user mb-2 p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200 flex items-center gap-3'
+              >
+                <div className='w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center'>
+                  <i className="ri-user-fill text-xl"></i>
+                </div>
+                <div>
+                  <h3 className='font-medium text-white'>
+                    {user.email && user.email.split('@')[0]}
+                  </h3>
+                  <p className='text-sm text-gray-400'>{user.email}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {modelIsOpen && (
+        <div className='fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50'>
+          <div className='bg-[#1e293b] text-white rounded-xl w-full max-w-md shadow-2xl'>
+            <div className='p-4 border-b border-gray-700 flex justify-between items-center'>
+              <h2 className='text-xl font-semibold'>Add Collaborators</h2>
+              <button
+                onClick={() => setModelIsOpen(false)}
+                className='hover:bg-blue-700 rounded-full p-2 transition-colors duration-200'
+              >
+                <i className='ri-close-line text-xl'></i>
+              </button>
+            </div>
+
+            <div className='p-4 max-h-[60vh] overflow-y-auto space-y-2'>
+              {users.map((user) => (
+                <div
+                  key={user._id}
+                  onClick={() => handleUserClick(user._id)}
+                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors duration-200 ${selectedUser.includes(user._id) ? 'bg-blue-700' : 'hover:bg-gray-700'}`}
+                >
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors duration-200 ${selectedUser.includes(user._id) ? 'bg-blue-600 text-white' : 'bg-gray-600'}`}>
+                    <i className='ri-user-fill text-xl'></i>
+                  </div>
+                  <div>
+                    <h3 className='font-medium'>{user?.email.split('@')[0]}</h3>
+                    <p className='text-sm text-gray-400'>{user.email}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className='p-4 border-t border-gray-700'>
+              <button
+                className='w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200'
+                onClick={addColobrators}
+              >
+                Add Selected Collaborators
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
   )
 }
 
