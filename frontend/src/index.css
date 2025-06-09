@@ -19,3 +19,16 @@
   background: #555;
 
 }
+/*  make a class name of sc whih make scroll bar hidden it can noot see bue use */
+.sc::-webkit-scrollbar {
+  display: none;
+}
+
+.sc {
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+
+
+
