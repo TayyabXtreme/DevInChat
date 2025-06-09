@@ -122,7 +122,7 @@ const Project = () => {
         <div className='flex-1 flex flex-col h-[calc(100vh-140px)] mt-16'>
           <div className='flex-1 overflow-hidden'>
             <div
-              className='message-box p-4 h-full overflow-y-auto scroll-smooth space-y-2'
+              className='message-box p-4 h-full overflow-y-auto scroll-smooth space-y-2 scroll-container'
               ref={messageBox}
               style={{ scrollBehavior: 'smooth' }}
             >
@@ -135,7 +135,10 @@ const Project = () => {
                 >
                   <small className='opacity-65 text-xs '>{msg.sender.email}</small>
                   <div className='text-sm'>
-  {msg.isMarkdown ?<div className='overflow-auto bg-slate-900 p-2 rounded-md  sc'> <Markdown
+  {msg.isMarkdown ?<div className='overflow-auto bg-slate-900 p-2 rounded-md  scroll-container'
+   
+    > <Markdown
+    className=''
     children={msg.message}
     
     

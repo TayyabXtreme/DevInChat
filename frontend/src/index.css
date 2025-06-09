@@ -20,15 +20,45 @@
 
 }
 /*  make a class name of sc whih make scroll bar hidden it can noot see bue use */
-.sc::-webkit-scrollbar {
+.sc::-webkit-scrollbar{
   display: none;
 }
 
-.sc {
-  -ms-overflow-style: none; /* IE/Edge */
+.scroll-container {
+  overflow: auto;
   scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+}
+
+.scroll-container::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Opera */
 }
 
 
 
 
+main::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
+
+
+body::-webkit-scrollbar {
+  /* display body scollbar */
+  display: block;
+  /* /scrollbar design */
+  width: 10px;
+  height: 10px;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  /* scrollbar bar is see */
+
+
+
+}
+body::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 5px;
+  border-radius: 5px;
+}
