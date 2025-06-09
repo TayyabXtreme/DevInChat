@@ -1,8 +1,10 @@
+// 👇 All imports stay the same
 import React, { createRef, useContext, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import axios from '../config/axios'
 import { intializeSocket, receiveMessage, sendMessage } from '../config/socket'
 import { UserContext } from '../context/user.context'
+import Markdown from 'markdown-to-jsx'
 
 const Project = () => {
   const { user } = useContext(UserContext)
@@ -16,6 +18,30 @@ const Project = () => {
 
   const [users, setUsers] = useState([])
   const [message, setMessage] = useState('')
+  const [messages, setMessages] = useState([])
+
+  // 👉 Handle incoming messages
+  const handleIncomingMessage = (data) => {
+    if (data.sender.email === 'ai') {
+      data.isMarkdown = true
+    }
+
+    setMessages((prev) => [...prev, data])
+  }
+
+  // 👉 Handle outgoing messages
+  const handleOutgoingMessage = () => {
+    if (!message.trim()) return
+
+    const messageData = {
+      message,
+      sender: user,
+    }
+
+    sendMessage('project-message', messageData)
+    setMessages((prev) => [...prev, messageData])
+    setMessage('')
+  }
 
   const handleUserClick = (id) => {
     setSelectedUser((prevSelectedUser) =>
@@ -30,46 +56,18 @@ const Project = () => {
       projectId: location.state.project._id,
       users: selectedUser,
     })
-      .then((res) => {
+      .then(() => {
         setModelIsOpen(false)
         setSelectedUser([])
       })
       .catch((err) => console.log(err))
   }
 
-  const sendMessageHandler = () => {
-    sendMessage('project-message', {
-      message,
-      sender: user,
-    })
-    appendOutgoingMessage({ message, sender: user })
-    setMessage('')
-  }
-
-  const appendIncommingMessage = (messageObject) => {
-    const messageDiv = document.createElement('div')
-    messageDiv.classList.add('incomming', 'max-w-56', 'message', 'flex', 'flex-col', 'p-2', 'bg-slate-700', 'w-fit', 'rounded-md', 'text-white')
-    messageDiv.innerHTML = `<small class='opacity-65 text-xs'>${messageObject.sender.email}</small>
-    <p class="text-sm">${messageObject.message}</p>`
-    messageBox.current.appendChild(messageDiv)
-    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  const appendOutgoingMessage = (messageObject) => {
-    const messageDiv = document.createElement('div')
-    messageDiv.classList.add('ml-auto', 'max-w-56', 'message', 'flex', 'flex-col', 'p-2', 'bg-blue-700', 'w-fit', 'rounded-md', 'text-white')
-    messageDiv.innerHTML = `<small class='opacity-65 text-xs'>${messageObject.sender.email}</small>
-    <p class="text-sm">${messageObject.message}</p>`
-    messageBox.current.appendChild(messageDiv)
-    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
   useEffect(() => {
     intializeSocket(project._id)
 
-    receiveMessage('project-message', (data) => {
-      appendIncommingMessage(data)
-    })
+    // ✅ Using clean handler
+    receiveMessage('project-message', handleIncomingMessage)
 
     axios.get(`/projects/get-project/${location.state.project._id}`)
       .then((res) => {
@@ -81,6 +79,10 @@ const Project = () => {
       .then((res) => setUsers(res.data.allUsers))
       .catch((err) => console.log(err))
   }, [])
+
+  useEffect(() => {
+    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   return (
     <main className='h-screen w-screen flex bg-[#0f172a] text-white'>
@@ -108,6 +110,19 @@ const Project = () => {
               ref={messageBox}
               style={{ scrollBehavior: 'smooth' }}
             >
+              {messages.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`max-w-56 message flex flex-col p-2 w-fit rounded-md text-white ${
+                    msg.sender.email === user.email ? 'ml-auto bg-blue-700' : 'bg-slate-700'
+                  }`}
+                >
+                  <small className='opacity-65 text-xs'>{msg.sender.email}</small>
+                  <div className='text-sm'>
+  {msg.isMarkdown ? <Markdown>{msg.message}</Markdown> : msg.message}
+</div>
+                </div>
+              ))}
               <div ref={messageEndRef}></div>
             </div>
           </div>
@@ -122,7 +137,7 @@ const Project = () => {
                 className='flex-1 p-3 rounded-full bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500'
               />
               <button
-                onClick={sendMessageHandler}
+                onClick={handleOutgoingMessage}
                 className='p-3 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200'
               >
                 <i className='ri-send-plane-fill text-xl'></i>
@@ -131,6 +146,7 @@ const Project = () => {
           </div>
         </div>
 
+        {/* Collaborators Panel */}
         <div className={`sidePanel fixed md:absolute w-full md:w-[450px] h-full flex flex-col bg-[#1e293b] shadow-xl transition-transform duration-300 ease-in-out ${isSidePanelOpen ? 'translate-x-0' : '-translate-x-full'} top-0 z-20`}>
           <header className='flex justify-between items-center p-4 border-b border-gray-700'>
             <h2 className='text-xl font-semibold'>Project Members</h2>
@@ -163,6 +179,7 @@ const Project = () => {
         </div>
       </section>
 
+      {/* Collaborator Modal */}
       {modelIsOpen && (
         <div className='fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50'>
           <div className='bg-[#1e293b] text-white rounded-xl w-full max-w-md shadow-2xl'>
