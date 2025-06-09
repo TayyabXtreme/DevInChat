@@ -78,6 +78,33 @@ const Project = () => {
       })
       .catch((err) => console.log(err))
   }
+  function safeJsonParse(str) {
+    try {
+      return JSON.parse(str)
+    } catch {
+      return null
+    }
+  }
+
+  function WriteAiMessage(message) {
+
+    const messageObject = JSON.parse(message)
+
+    return (
+        <div
+            className='overflow-auto bg-slate-950 text-white rounded-sm p-2'
+        >
+            <Markdown
+                children={messageObject.text}
+                options={{
+                    overrides: {
+                        code: SyntaxHighlightedCode,
+                    },
+                }}
+            />
+        </div>)
+}
+  
 
   useEffect(() => {
     intializeSocket(project._id)
@@ -135,21 +162,11 @@ const Project = () => {
                 >
                   <small className='opacity-65 text-xs '>{msg.sender.email}</small>
                   <div className='text-sm'>
-  {msg.isMarkdown ?<div className='overflow-auto bg-slate-900 p-2 rounded-md  scroll-container'
-   
-    > <Markdown
-    className=''
-    children={msg.message}
-    
-    
-                    options={{
-                        overrides: {
-                            code: SyntaxHighlightedCode,
-                            
-                        },
-                        
-                        
-                    }} /> </div>: msg.message}
+  {msg.isMarkdown ?
+
+                    WriteAiMessage(msg.message)
+                    
+                    : msg.message}
 </div>
                 </div>
               ))}
