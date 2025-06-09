@@ -20,6 +20,22 @@ const Project = () => {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState([])
 
+
+  function SyntaxHighlightedCode(props) {
+    const ref = useRef(null)
+
+    React.useEffect(() => {
+        if (ref.current && props.className?.includes('lang-') && window.hljs) {
+            window.hljs.highlightElement(ref.current)
+
+            // hljs won't reprocess the element unless this attribute is removed
+            ref.current.removeAttribute('data-highlighted')
+        }
+    }, [ props.className, props.children ])
+
+    return <code {...props} ref={ref} />
+}
+
   // 👉 Handle incoming messages
   const handleIncomingMessage = (data) => {
     if (data.sender.email === 'ai') {
@@ -113,13 +129,24 @@ const Project = () => {
               {messages.map((msg, idx) => (
                 <div
                   key={idx}
-                  className={`max-w-56 message flex flex-col p-2 w-fit rounded-md text-white ${
+                  className={`${msg.sender.email=='ai' ? 'max-w-96': 'max-w-56' } message flex flex-col p-2 w-fit rounded-md text-white ${
                     msg.sender.email === user.email ? 'ml-auto bg-blue-700' : 'bg-slate-700'
                   }`}
                 >
-                  <small className='opacity-65 text-xs'>{msg.sender.email}</small>
+                  <small className='opacity-65 text-xs '>{msg.sender.email}</small>
                   <div className='text-sm'>
-  {msg.isMarkdown ? <Markdown>{msg.message}</Markdown> : msg.message}
+  {msg.isMarkdown ?<div className='overflow-auto bg-slate-900 p-2 rounded-md  sc'> <Markdown
+    children={msg.message}
+    
+    
+                    options={{
+                        overrides: {
+                            code: SyntaxHighlightedCode,
+                            
+                        },
+                        
+                        
+                    }} /> </div>: msg.message}
 </div>
                 </div>
               ))}
