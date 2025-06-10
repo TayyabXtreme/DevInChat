@@ -19,6 +19,9 @@ const Project = () => {
   const [users, setUsers] = useState([])
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState([])
+  const [fileTree, setFileTree] = useState({})
+  const [currentFile, setCurrentFile] = useState('')
+  const [openFiles, setOpenFiles] = useState([])
 
 
   function SyntaxHighlightedCode(props) {
@@ -38,6 +41,12 @@ const Project = () => {
 
   // 👉 Handle incoming messages
   const handleIncomingMessage = (data) => {
+    console.log(JSON.parse(data.message))
+    const message = JSON.parse(data.message)
+    if(message.fileTree){
+      setFileTree(message.fileTree)
+    }
+
     if (data.sender.email === 'ai') {
       data.isMarkdown = true
     }
@@ -224,6 +233,87 @@ const Project = () => {
             ))}
           </div>
         </div>
+      </section>
+
+      <section className="right  bg-red-50 flex-grow h-full flex">
+            <div className="explorer h-full max-w-64 min-w-52 bg-slate-200">
+                    <div className="file-tree w-full">
+                    {
+                            Object.keys(fileTree).map((file, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => {
+                                        setCurrentFile(file)
+                                        setOpenFiles([ ...new Set([ ...openFiles, file ]) ])
+                                    }}
+                                    className="tree-element cursor-pointer p-2 px-4 flex items-center gap-2 bg-slate-300 w-full">
+                                    <p
+                                        className='font-semibold text-lg'
+                                    >{file}</p>
+                                </button>))
+
+                        }
+                    
+                    </div>
+            </div>
+
+             <div className="code-editor flex flex-col flex-grow h-full shrink">
+
+                 {
+                 
+                 currentFile && (
+                  <div className='code-editor flex flex-col flex-grow h-full'>
+                   <div className="top flex justify-between w-full">
+
+                        <div className="files flex">
+                            {
+                                openFiles.map((file, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => setCurrentFile(file)}
+                                        className={`open-file cursor-pointer p-2 px-4 flex items-center w-fit gap-2 bg-slate-300 ${currentFile === file ? 'bg-slate-400' : ''}`}>
+                                        <p
+                                            className='font-semibold text-lg'
+                                        >{file}</p>
+                                        <i className='ri-close-line text-xl'  
+                                        onClick={() => setOpenFiles(openFiles.filter((file) => file !== currentFile))}
+                                        ></i>
+                                    </button>
+                                ))
+                            }
+                        </div>
+                    </div>
+                   
+                  <div className="bottom h-full flex-grow">
+                  
+                  {
+                    fileTree[currentFile] && (
+                      <textarea
+                        className='w-full h-full bg-slate-300 p-4 text-xl text-black'
+                        value={fileTree[currentFile]['file']['contents']}
+                        onChange={(e) => {
+                          setFileTree((prev) => ({
+                            ...prev,
+                            [currentFile]: {
+                              ...prev[currentFile],
+                              file: {
+                                ...prev[currentFile].file,
+                                contents: e.target.value,
+                              },
+                            },
+                          }))
+                        }}
+                      />
+                    )
+                  
+                  }
+                    
+                    </div>
+                  </div>
+                 )
+                 }
+
+            </div>
       </section>
 
       {/* Collaborator Modal */}
