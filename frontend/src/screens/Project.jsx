@@ -6,6 +6,7 @@ import { intializeSocket, receiveMessage, sendMessage } from '../config/socket'
 import { UserContext } from '../context/user.context'
 import Markdown from 'markdown-to-jsx'
 import hljs from 'highlight.js'
+import { getWebContainer } from '../config/webContainer'
 
 const Project = () => {
   const { user } = useContext(UserContext)
@@ -23,6 +24,9 @@ const Project = () => {
   const [fileTree, setFileTree] = useState({})
   const [currentFile, setCurrentFile] = useState('')
   const [openFiles, setOpenFiles] = useState([])
+  const [webContainer, setWebContainer] = useState(null)
+
+  
 
 
   function SyntaxHighlightedCode(props) {
@@ -44,7 +48,10 @@ const Project = () => {
   const handleIncomingMessage = (data) => {
     console.log(JSON.parse(data.message))
     const message = JSON.parse(data.message)
+    
+
     if(message.fileTree){
+      webContainer?.mount(message.fileTree)
       setFileTree(message.fileTree)
     }
 
@@ -118,6 +125,13 @@ const Project = () => {
 
   useEffect(() => {
     intializeSocket(project._id)
+
+    if(!webContainer){
+      getWebContainer().then(container=>{
+        setWebContainer(container)
+        console.log("container",container)
+      })
+    }
 
     // ✅ Using clean handler
     receiveMessage('project-message', handleIncomingMessage)
