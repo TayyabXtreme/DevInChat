@@ -25,6 +25,7 @@ const Project = () => {
   const [currentFile, setCurrentFile] = useState('')
   const [openFiles, setOpenFiles] = useState([])
   const [webContainer, setWebContainer] = useState(null)
+  const [ runProcess, setRunProcess ] = useState(null)
 
   
 
@@ -44,22 +45,56 @@ const Project = () => {
     return <code {...props} ref={ref} />
 }
 
+  // Function to save file tree and send it to other collaborators
+  const saveFileTree = (fileTree) => {
+    // Update the WebContainer with the new file tree
+    webContainer?.mount(fileTree).then(() => {
+      console.log('File tree updated in WebContainer');
+      
+      // Send the file tree to other collaborators
+      const messageData = {
+        message: JSON.stringify({
+          fileTree: fileTree,
+          text: "File tree updated"
+        }),
+        sender: user,
+      };
+      
+      sendMessage('project-message', messageData);
+    }).catch(error => {
+      console.error('Error updating file tree in WebContainer:', error);
+    });
+  }
+
   // 👉 Handle incoming messages
   const handleIncomingMessage = (data) => {
-    console.log(JSON.parse(data.message))
-    const message = JSON.parse(data.message)
-    
+    console.log('Received message:', data);
+    try {
+      const message = JSON.parse(data.message);
+      
+      if(message.fileTree){
+        console.log('Received file tree:', message.fileTree);
+        setFileTree(message.fileTree);
+        
+        // Mount the file tree to the WebContainer
+        if (webContainer) {
+          webContainer.mount(message.fileTree)
+            .then(() => console.log('File tree mounted successfully'))
+            .catch(err => console.error('Error mounting file tree:', err));
+        } else {
+          console.warn('WebContainer not initialized yet, file tree will be mounted when available');
+        }
+      }
 
-    if(message.fileTree){
-      webContainer?.mount(message.fileTree)
-      setFileTree(message.fileTree)
+      if (data.sender.email === 'ai') {
+        data.isMarkdown = true;
+      }
+
+      setMessages((prev) => [...prev, data]);
+    } catch (error) {
+      console.error('Error processing incoming message:', error);
+      setMessages((prev) => [...prev, data]);
     }
-
-    if (data.sender.email === 'ai') {
-      data.isMarkdown = true
-    }
-
-    setMessages((prev) => [...prev, data])
   }
 
   // 👉 Handle outgoing messages
@@ -130,6 +165,36 @@ const Project = () => {
       getWebContainer().then(container=>{
         setWebContainer(container)
         console.log("container",container)
+        
+        // Create a basic file structure with package.json
+        const files = {
+          'package.json': {
+            file: {
+              contents: JSON.stringify({
+                name: 'devinchat-project',
+                version: '1.0.0',
+                description: 'A project created in DevInChat',
+                main: 'index.js',
+                scripts: {
+                  start: 'node index.js'
+                },
+                dependencies: {}
+              }, null, 2)
+            }
+          },
+          'index.js': {
+            file: {
+              contents: 'console.log("Hello from DevInChat!");'
+            }
+          }
+        };
+        
+        // Mount the files to the WebContainer
+        container.mount(files).then(() => {
+          console.log('Files mounted successfully');
+          // Update the file tree state
+          setFileTree(files);
+        });
       })
     }
 
@@ -276,7 +341,7 @@ const Project = () => {
 
                  {
                  
-                 currentFile && (
+                 
                   <div className='code-editor flex flex-col flex-grow h-full'>
                    <div className="top flex justify-between w-full">
 
@@ -290,13 +355,116 @@ const Project = () => {
                                         <p
                                             className='font-semibold text-lg'
                                         >{file}</p>
-                                        <i className='ri-close-line text-xl'  
-                                        onClick={() => setOpenFiles(openFiles.filter((file) => file !== currentFile))}
-                                        ></i>
                                     </button>
                                 ))
                             }
                         </div>
+                        <div className="actions flex gap-2">
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        if (!webContainer) {
+                                            console.error('WebContainer not initialized');
+                                            return;
+                                        }
+                                        
+                                        // Check if files are mounted
+                                        try {
+                                            const packageJson = await webContainer.fs.readFile('package.json', 'utf-8');
+                                            console.log('Package.json exists:', packageJson);
+                                            
+                                            // Parse package.json to check dependencies
+                                            const pkgJson = JSON.parse(packageJson);
+                                            console.log('Dependencies:', pkgJson.dependencies);
+                                            
+                                            // Run npm install
+                                            console.log('Starting npm install...');
+                                            const installProcess = await webContainer.spawn('npm', ['install']);
+                                            
+                                            installProcess.output.pipeTo(new WritableStream({
+                                                write(chunk) {
+                                                    console.log('Install output:', chunk);
+                                                }
+                                            }));
+                                            
+                                            // Wait for install to complete
+                                            const installExit = await installProcess.exit;
+                                            console.log('Install process exited with code:', installExit);
+                                            
+                                            if (installExit === 0) {
+                                                // Run npm start
+                                                console.log('Starting npm start...');
+                                                const startProcess = await webContainer.spawn('npm', ['start']);
+                                                setRunProcess(startProcess);
+                                                
+                                                startProcess.output.pipeTo(new WritableStream({
+                                                    write(chunk) {
+                                                        console.log('Run output:', chunk);
+                                                    }
+                                                }));
+                                            } else {
+                                                console.error('npm install failed with exit code:', installExit);
+                                            }
+                                        } catch (error) {
+                                            console.error('Error reading package.json or running commands:', error);
+                                            
+                                            // If package.json doesn't exist, create it and try again
+                                            if (error.message && error.message.includes('No such file')) {
+                                                console.log('Creating package.json and trying again...');
+                                                
+                                                // Create basic package.json
+                                                const basicPackageJson = {
+                                                    name: 'devinchat-project',
+                                                    version: '1.0.0',
+                                                    description: 'A project created in DevInChat',
+                                                    main: 'index.js',
+                                                    scripts: {
+                                                        start: 'node index.js'
+                                                    },
+                                                    dependencies: {}
+                                                };
+                                                
+                                                // Write package.json
+                                                await webContainer.fs.writeFile('package.json', JSON.stringify(basicPackageJson, null, 2));
+                                                
+                                                // Create index.js if it doesn't exist
+                                                try {
+                                                    await webContainer.fs.readFile('index.js', 'utf-8');
+                                                } catch (e) {
+                                                    await webContainer.fs.writeFile('index.js', 'console.log("Hello from DevInChat!");');
+                                                }
+                                                
+                                                // Try running npm install again
+                                                const installProcess = await webContainer.spawn('npm', ['install']);
+                                                installProcess.output.pipeTo(new WritableStream({
+                                                    write(chunk) {
+                                                        console.log('Install output:', chunk);
+                                                    }
+                                                }));
+                                                
+                                                const installExit = await installProcess.exit;
+                                                if (installExit === 0) {
+                                                    const startProcess = await webContainer.spawn('npm', ['start']);
+                                                    setRunProcess(startProcess);
+                                                    
+                                                    startProcess.output.pipeTo(new WritableStream({
+                                                        write(chunk) {
+                                                            console.log('Run output:', chunk);
+                                                        }
+                                                    }));
+                                                }
+                                            }
+                                        }
+                                    } catch (error) {
+                                        console.error('Error running commands:', error);
+                                    }
+                                }}
+                                className='p-2 px-4 bg-slate-300 text-white'
+                            >
+                                run
+                            </button>
+                        </div>
+
                     </div>
                    
                   <div className="bottom h-full flex-grow">
@@ -330,7 +498,7 @@ const Project = () => {
                                                 counterSet: 'line-numbering',
                                             }}
                                         />
-                                    </pre>
+                                     </pre>
                                 </div>
                     )
                   
@@ -338,7 +506,7 @@ const Project = () => {
                     
                     </div>
                   </div>
-                 )
+                 
                  }
 
             </div>
