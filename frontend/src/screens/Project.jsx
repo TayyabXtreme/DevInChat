@@ -5,6 +5,7 @@ import axios from '../config/axios'
 import { intializeSocket, receiveMessage, sendMessage } from '../config/socket'
 import { UserContext } from '../context/user.context'
 import Markdown from 'markdown-to-jsx'
+import hljs from 'highlight.js'
 
 const Project = () => {
   const { user } = useContext(UserContext)
@@ -288,22 +289,35 @@ const Project = () => {
                   
                   {
                     fileTree[currentFile] && (
-                      <textarea
-                        className='w-full h-full bg-slate-300 p-4 text-xl text-black'
-                        value={fileTree[currentFile]['file']['contents']}
-                        onChange={(e) => {
-                          setFileTree((prev) => ({
-                            ...prev,
-                            [currentFile]: {
-                              ...prev[currentFile],
-                              file: {
-                                ...prev[currentFile].file,
-                                contents: e.target.value,
-                              },
-                            },
-                          }))
-                        }}
-                      />
+                      <div className="code-editor-area h-full overflow-auto flex-grow bg-slate-50">
+                                    <pre
+                                        className="hljs h-full">
+                                        <code
+                                            className="hljs h-full outline-none"
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            onBlur={(e) => {
+                                                const updatedContent = e.target.innerText;
+                                                const ft = {
+                                                    ...fileTree,
+                                                    [ currentFile ]: {
+                                                        file: {
+                                                            contents: updatedContent
+                                                        }
+                                                    }
+                                                }
+                                                setFileTree(ft)
+                                                saveFileTree(ft)
+                                            }}
+                                            dangerouslySetInnerHTML={{ __html: hljs.highlight('javascript', fileTree[ currentFile ].file.contents).value }}
+                                            style={{
+                                                whiteSpace: 'pre-wrap',
+                                                paddingBottom: '25rem',
+                                                counterSet: 'line-numbering',
+                                            }}
+                                        />
+                                    </pre>
+                                </div>
                     )
                   
                   }
